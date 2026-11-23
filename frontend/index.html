@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BarberFlow | Sistema de Gestión y Reservas</title>
+<style>
+  :root { --bg: #0f172a; --card: #1e293b; --accent: #f59e0b; --text: #f8fafc; --muted: #94a3b8; --ok: #10b981; --danger: #ef4444; }
+  * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+  body { margin: 0; background: var(--bg); color: var(--text); }
+  header { background: #020617; padding: 16px 32px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; }
+  .brand { font-size: 1.4rem; font-weight: 800; color: var(--accent); letter-spacing: 0.5px; }
+  .tabs button { background: transparent; border: 1px solid #334155; color: var(--text); padding: 8px 16px; border-radius: 6px; cursor: pointer; margin-left: 8px; }
+  .tabs button.active { background: var(--accent); color: #020617; font-weight: 700; border-color: var(--accent); }
+  .container { max-width: 1100px; margin: 28px auto; padding: 0 20px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .card { background: var(--card); padding: 20px; border-radius: 10px; border: 1px solid #334155; }
+  .kpi { font-size: 2rem; font-weight: 800; color: var(--accent); margin: 6px 0; }
+  label { display: block; font-size: 0.85rem; color: var(--muted); margin-top: 12px; }
+  input, select, textarea { width: 100%; padding: 10px; margin-top: 4px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: var(--text); }
+  .btn { background: var(--accent); color: #020617; border: none; padding: 10px 18px; border-radius: 6px; font-weight: 700; cursor: pointer; margin-top: 16px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+  th, td { padding: 12px; text-align: left; border-bottom: 1px solid #334155; font-size: 0.9rem; }
+  th { color: var(--accent); }
+  .badge { padding: 4px 10px; border-radius: 999px; font-size: 0.78rem; font-weight: 700; background: #334155; }
+  .badge.RESERVADA { background: #1d4ed8; }
+  .badge.CLIENTE_LLEGO { background: #7c3aed; }
+  .badge.EN_ATENCION { background: #d97706; }
+  .badge.FINALIZADA { background: #059669; }
+  .badge.CANCELADA { background: #dc2626; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">✂️ BarberFlow <span style="font-size:0.8rem;color:#94a3b8;font-weight:400;">v1.2.0 | UNIMINUTO</span></div>
+  <div class="tabs">
+    <button class="active" onclick="showTab('cliente', this)">Vista Cliente</button>
+    <button onclick="showTab('barbero', this)">Agenda Barbero</button>
+    <button onclick="showTab('admin', this)">Panel Administrador</button>
+  </div>
+</header>
+
+<div class="container">
+  <section id="tab-cliente">
+    <div class="grid">
+      <div class="card"><h3>Corte de Cabello</h3><p style="color:#94a3b8;">Corte clásico o fade con lavado</p><strong>$20.000 COP · 30 min</strong></div>
+      <div class="card"><h3>Servicio de Barba</h3><p style="color:#94a3b8;">Perfilado y toalla caliente</p><strong>$15.000 COP · 20 min</strong></div>
+      <div class="card"><h3>Corte + Barba</h3><p style="color:#94a3b8;">Servicio integral completo</p><strong>$32.000 COP · 45 min</strong></div>
+      <div class="card"><h3>Corte Infantil</h3><p style="color:#94a3b8;">Menores de 12 años</p><strong>$16.000 COP · 25 min</strong></div>
+    </div>
+    <div class="card">
+      <h2>Agendar Nueva Reserva (CU-01)</h2>
+      <div class="grid">
+        <div><label>Nombre del Cliente</label><input id="c-nombre" value="Carlos Mendoza"></div>
+        <div><label>Servicio</label><select id="c-servicio"><option>Corte de cabello</option><option>Servicio de barba</option><option selected>Corte + barba</option><option>Corte infantil</option></select></div>
+        <div><label>Fecha</label><input type="date" id="c-fecha" value="2026-11-23"></div>
+        <div><label>Horario Disponible</label><select id="c-hora"><option>09:00</option><option>10:30</option><option selected>14:00</option><option>16:30</option></select></div>
+      </div>
+      <label>Preferencias de Estilo (RF-08)</label>
+      <input id="c-pref" value="Degradado medio con navaja, barba perfilada natural">
+      <button class="btn" onclick="crearCita()">Confirmar Reserva</button>
+      <p id="msg" style="color:#10b981;font-weight:600;"></p>
+    </div>
+  </section>
+
+  <section id="tab-barbero" class="hidden">
+    <div class="card">
+      <h2>Agenda Diaria y Control de Estados (CU-02)</h2>
+      <table>
+        <thead><tr><th>Hora</th><th>Cliente</th><th>Servicio</th><th>Preferencia</th><th>Estado</th><th>Acción</th></tr></thead>
+        <tbody id="tabla-citas"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="tab-admin" class="hidden">
+    <div class="grid">
+      <div class="card"><div>Citas del Día</div><div class="kpi" id="kpi-total">4</div></div>
+      <div class="card"><div>Finalizadas</div><div class="kpi" id="kpi-fin">1</div></div>
+      <div class="card"><div>Canceladas</div><div class="kpi" id="kpi-can">0</div></div>
+      <div class="card"><div>Servicio Top</div><div class="kpi" style="font-size:1.3rem;">Corte + Barba</div></div>
+    </div>
+  </section>
+</div>
+
+<script>
+const citas = [
+  { hora: '09:00', cliente: 'Andrés Gómez', servicio: 'Corte de cabello', pref: 'Fade bajo', estado: 'FINALIZADA' },
+  { hora: '10:30', cliente: 'Luis Torres', servicio: 'Corte + barba', pref: 'Barba cuadrada', estado: 'EN_ATENCION' },
+  { hora: '11:30', cliente: 'Mateo Díaz', servicio: 'Servicio de barba', pref: 'Toalla caliente', estado: 'CLIENTE_LLEGO' },
+  { hora: '14:00', cliente: 'Carlos Mendoza', servicio: 'Corte + barba', pref: 'Degradado medio', estado: 'RESERVADA' }
+];
+const flujo = ['RESERVADA', 'CLIENTE_LLEGO', 'EN_ATENCION', 'FINALIZADA'];
+
+function render() {
+  const tbody = document.getElementById('tabla-citas');
+  tbody.innerHTML = citas.map((c, i) => `
+    <tr>
+      <td>${c.hora}</td><td>${c.cliente}</td><td>${c.servicio}</td><td>${c.pref}</td>
+      <td><span class="badge ${c.estado}">${c.estado}</span></td>
+      <td>${c.estado !== 'FINALIZADA' && c.estado !== 'CANCELADA' ? `<button class="btn" style="margin:0;padding:6px 10px;" onclick="avanzar(${i})">Siguiente Estado</button>` : '—'}</td>
+    </tr>
+  `).join('');
+  document.getElementById('kpi-total').innerText = citas.length;
+  document.getElementById('kpi-fin').innerText = citas.filter(c => c.estado === 'FINALIZADA').length;
+  document.getElementById('kpi-can').innerText = citas.filter(c => c.estado === 'CANCELADA').length;
+}
+
+function avanzar(i) {
+  const idx = flujo.indexOf(citas[i].estado);
+  if (idx >= 0 && idx < flujo.length - 1) citas[i].estado = flujo[idx + 1];
+  render();
+}
+
+function crearCita() {
+  citas.push({
+    hora: document.getElementById('c-hora').value,
+    cliente: document.getElementById('c-nombre').value,
+    servicio: document.getElementById('c-servicio').value,
+    pref: document.getElementById('c-pref').value,
+    estado: 'RESERVADA'
+  });
+  document.getElementById('msg').innerText = '✓ Reserva confirmada y asignada automáticamente a barbero disponible.';
+  render();
+}
+
+function showTab(tab, btn) {
+  ['cliente', 'barbero', 'admin'].forEach(t => document.getElementById('tab-' + t).classList.add('hidden'));
+  document.getElementById('tab-' + tab).classList.remove('hidden');
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+render();
+</script>
+</body>
+</html>
